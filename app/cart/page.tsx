@@ -10,16 +10,41 @@ import toast from 'react-hot-toast'
 export default function CartPage() {
   const { items, updateQuantity, removeItem, getTotalPrice, clearCart } = useCartStore()
   const [isLoading, setIsLoading] = useState(false)
+  const [email, setEmail] = useState('')
 
   const handleCheckout = async () => {
+    if (!email) {
+      toast.error('Please enter your email address')
+      return
+    }
+
     setIsLoading(true)
     
-    // Simulate checkout process
-    setTimeout(() => {
-      toast.success('Redirecting to checkout...')
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: items,
+          customerEmail: email,
+        }),
+      })
+
+      const { url } = await response.json()
+      
+      if (url) {
+        window.location.href = url
+      } else {
+        toast.error('Failed to create checkout session')
+      }
+    } catch (error) {
+      console.error('Checkout error:', error)
+      toast.error('Something went wrong. Please try again.')
+    } finally {
       setIsLoading(false)
-      // In a real app, redirect to Stripe checkout
-    }, 1000)
+    }
   }
 
   if (items.length === 0) {
@@ -126,9 +151,25 @@ export default function CartPage() {
             </div>
           </div>
 
+          {/* Email Input */}
+          <div className="mt-6">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              Email Address
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+            />
+          </div>
+
           <button
             onClick={handleCheckout}
-            disabled={isLoading}
+            disabled={isLoading || !email}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Processing...' : 'Proceed to Checkout'}
@@ -147,6 +188,13 @@ export default function CartPage() {
           >
             Continue Shopping
           </Link>
+
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-medium text-gray-900 mb-2">Secure Checkout</h3>
+            <p className="text-sm text-gray-600">
+              Your payment information is encrypted and secure. We accept all major credit cards.
+            </p>
+          </div>
         </div>
       </div>
     </div>
